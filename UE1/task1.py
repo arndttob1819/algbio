@@ -43,7 +43,7 @@ def count_restriction_enzyme_sites(dna_sequence):
     counts = []        
 
     # TODO: add your implementation
-    for pattern in enzymes:
+    for pattern in sites:
         counts.append(len(find_all(dna_sequence=dna_sequence, dna_pattern=pattern)))
 
     return enzymes, sites, counts
@@ -83,6 +83,17 @@ def find_longest_microsatellite_repeat(dna_sequence):
     longest_repeat = 0
     
     # TODO: add your implementation
+    positions = find_all(dna_sequence=dna_sequence, dna_pattern=trinucleotide)
+    repeat = 0
+    if len(find_all) > 0:
+        longest_repeat = 1
+    i = 0
+    while i < len(find_all):
+        if positions[i]+len(trinucleotide) == positions[i+1]:
+            repeat += 1
+            longest_repeat = max(longest_repeat, repeat)
+        else:
+            repeat = 0
 
     return trinucleotide, longest_repeat
 
