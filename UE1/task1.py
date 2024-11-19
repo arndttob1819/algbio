@@ -26,7 +26,7 @@ def find_all(dna_sequence, dna_pattern):
     return result
 
 
-def count_restriction_enzyme_sites(dna_sequnece):
+def count_restriction_enzyme_sites(dna_sequence):
     """
     Counts recognition sites for specified restriction enzymes within dna_sequence.
 
@@ -40,9 +40,11 @@ def count_restriction_enzyme_sites(dna_sequnece):
     """
     enzymes = ["EcoRI", "BamHI", "HindIII", "NotI", "I-SceI"]
     sites = ["GAATTC", "GGATCC", "AAGCTT", "GCGGCCGC", "TAGGGATAACAGGGTAAT"]
-    counts = []
+    counts = []        
 
     # TODO: add your implementation
+    for pattern in enzymes:
+        counts.append(len(find_all(dna_sequence=dna_sequence, dna_pattern=pattern)))
 
     return enzymes, sites, counts
 
