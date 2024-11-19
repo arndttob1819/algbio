@@ -1,0 +1,5 @@
+name: machine-learning-env
+channels:
+  - defaults
+  - conda-forge
+prefix: D:\miniconda3\envs\machine-learning-env
