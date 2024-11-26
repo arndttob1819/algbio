@@ -1,7 +1,7 @@
 # -------------------------------
-# Abgabegruppe:
-# Personen:
-# HU-Accountname:
+# Abgabegruppe: 19
+# Personen: Tobias Arndt, Benjamin Höhnisch, Tim Patzak
+# HU-Accountname: arndttob, hoehnisb, patzakti
 # -------------------------------
 import time
 from Bio import SeqIO
