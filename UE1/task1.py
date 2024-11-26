@@ -1,17 +1,17 @@
 # -------------------------------
 # Abgabegruppe: 19
-# Personen: Tobias Arndt, Benjamin Hoehnisch, Tim Patzak
-# HU-Accountname: arndttob, , patzakti
+# Personen: Tobias Arndt, Benjamin Höhnisch, Tim Patzak
+# HU-Accountname: arndttob, hoehnisb, patzakti
 # -------------------------------
-import time
 from Bio import SeqIO
 import matplotlib.pyplot as plt
+import time
 
 
 def find_all(dna_sequence, dna_pattern):
     """
-    Implements the Knuth-Morris-Pratt (KMP) algorithm to efficiently find all occurrences of dna_pattern within dna_sequence.
-
+    Implements the Knuth-Morris-Pratt (KMP) algorithm to efficiently find all occurrences of dna_pattern within dna_sequence. 
+    
     Input:
         dna_sequence = str,
         dna_pattern = str
@@ -21,52 +21,54 @@ def find_all(dna_sequence, dna_pattern):
     """
     result = []
 
-    spi_s = preprocessing(dna_pattern)
-    i = 0  # Sequence
-    j = 0  # Pattern
-    while i < len(dna_sequence) - (len(dna_pattern) + 1):
-        # Shift 1
-        if j == 0 and dna_pattern[j] != dna_sequence[i]:
-            i += 1
-        # Shift 2
-        elif j < len(dna_pattern) and dna_pattern[j] != dna_sequence[i]:
-            # i += spi_s[j-1]
-            j = spi_s[j - 1]
-        # Shift 3
-        elif j == len(dna_pattern):
-            result.append(i - len(dna_pattern))
-            # i+=len(dna_pattern)-spi_s[-1]
-            j = spi_s[-1]
+    # Setup look-up-table (LPS)
+    lookUp = [0]
+    for i in range(1, len(dna_pattern)):
+        # Check if smaller suffix was already found
+        if lookUp[i-1] != 0:
+            # Check if suffix increased
+            if dna_pattern[lookUp[i-1]] == dna_pattern[i]:
+                lookUp.append(lookUp[i-1] + 1)
 
+                # LPS'
+                lookUp[i-1] = 0
+            # Check if suffix is length 1
+            elif dna_pattern[0] == dna_pattern[i]:
+                lookUp.append(1)
+            else:
+                lookUp.append(0)
         else:
+            # Check if current char is a prefix
+            if dna_pattern[0] == dna_pattern[i]:
+                lookUp.append(1)
+            else:
+                lookUp.append(0)
+
+    # KMP
+    i = 0
+    j = 0
+    while i + len(dna_pattern) <= len(dna_sequence):
+        if dna_sequence[i] == dna_pattern[j]:
+            # If chars match move both pointers
             i += 1
             j += 1
+        else:
+            if j == 0:
+                # If first pattern char doesn't match move only sequence pointer
+                i += 1
+            else:
+                # Jump
+                j = lookUp[j-1]
+
+        # Pattern was found
+        if j == len(dna_pattern):
+            result.append(i-len(dna_pattern))
+            j = lookUp[-1]
 
     return result
 
 
-def preprocessing(dna_pattern):
-    spi = []
-    for i in range(0, len(dna_pattern)):
-        matches = 0
-        slice = dna_pattern[:(i + 1)]
-        # print(slice)
-        for j in range(int(len(slice) / 2)):
-            if slice[:j + 1] == slice[len(slice) - (j + 1):len(slice)]:
-                if len(slice[:j + 1]) > matches:
-                    matches = len(slice[:j + 1])
-        spi.append(matches)
-    spi_s = []
-    for i in range(len(spi) - 1):
-        if spi[i + 1] - 1 == spi[i]:
-            spi_s.append(0)
-        else:
-            spi_s.append(spi[i])
-    spi_s.append(spi[len(spi) - 1])
-    return spi_s
-
-
-def count_restriction_enzyme_sites(dna_sequence):
+def count_restriction_enzyme_sites(dna_sequnece):
     """
     Counts recognition sites for specified restriction enzymes within dna_sequence.
 
@@ -82,9 +84,10 @@ def count_restriction_enzyme_sites(dna_sequence):
     sites = ["GAATTC", "GGATCC", "AAGCTT", "GCGGCCGC", "TAGGGATAACAGGGTAAT"]
     counts = []
 
-    # TODO: add your implementation
-    for enzyme in sites:
-        counts.append(len(find_all(dna_sequence, enzyme)))
+    # Search for patterns individually and count occurrences
+    for pattern in sites:
+        offsets = find_all(dna_sequence, pattern)
+        counts.append(len(offsets))
 
     return enzymes, sites, counts
 
@@ -102,11 +105,13 @@ def compute_NotI_site_distribution(dna_sequence):
     enzyme = "NotI"
     site = "GCGGCCGC"
     _, ax = plt.subplots()
+    
+    # Find all occurrences of the enzyme
+    offsets = find_all(dna_sequence, site)
 
-    # TODO: add your implementation
-    positions = find_all(dna_sequence, site)
-    ax.hist(positions,100)
-
+    # Add data to plot
+    plt.hist(offsets, bins=100)
+    
     return ax
 
 
@@ -124,15 +129,20 @@ def find_longest_microsatellite_repeat(dna_sequence):
     trinucleotide = "AAT"
     longest_repeat = 0
 
-    # TODO: add your implementation
-    findings = find_all(dna_sequence, trinucleotide)
-    for i in range(1, len(findings)):
-        repeat = 1
-        while findings[i] - 3 == findings[i - 1]:
-            repeat += 1
-            if repeat > longest_repeat:
-                longest_repeat = repeat
-            i += 1
+    offsets = find_all(dna_sequence, trinucleotide)
+
+    # Check if pattern is at least found once
+    if len(offsets) > 0:
+        longest_repeat = 1
+    for i in range(0, len(offsets)):
+        j = 1
+        # Check if offsets have a distance of exactly j * pattern length
+        while (i+j) < len(offsets) and (offsets[i] + len(trinucleotide)*j) == offsets[i+j]:
+            j += 1
+            if j > longest_repeat:
+                longest_repeat = j
+        # Skip already found repetitions
+        i += j
 
     return trinucleotide, longest_repeat
 
@@ -148,21 +158,36 @@ def count_palindromic_sequences(dna_sequence):
         ax = matplotlib.axes.Axes
     """
     length = 4
-    complement = {'A': 'T', 'T': 'A', 'C': 'G', 'G': 'C'}
+    complement = {'A':'T', 'T':'A', 'C':'G', 'G':'C'}
     _, ax = plt.subplots()
 
-    # TODO: add your implementation
-    palindrome_sequences = []
-    for key, value in complement.items():
-        for key2, value2 in complement.items():
-            palindrome_sequences.append(str(key + key2 + value2 + value))
-    for seq in palindrome_sequences:
-        offsets = []
-        index = dna_sequence.find(seq)
-        while index != -1:
-            offsets.append(index)
-            index = dna_sequence.find(seq, index + 1)
-        ax.barh(seq, len(offsets))
+    offsets = []
+    palindromes = {}
+    for i in range(0, len(dna_sequence)-length):
+        isPalindrome = True
+
+        # Compare letters inward to check if they are complement of each other
+        for j in range(0, int(length/2)):
+            if dna_sequence[i+length-1 - j] not in complement.keys():
+                isPalindrome = False
+                break
+
+            if complement[dna_sequence[i+length-1 - j]] != dna_sequence[i + j]:
+                isPalindrome = False
+                break
+
+        if isPalindrome:
+            offsets.append(i)
+
+            palindrome = dna_sequence[i:i+length]
+            if palindrome in palindromes.keys():
+                palindromes[palindrome] += 1
+            else:
+                palindromes[palindrome] = 1
+
+    plt.bar(palindromes.keys(), palindromes.values())
+    plt.xticks(rotation=90)
+
     return ax
 
 
@@ -173,7 +198,6 @@ def test_find_all(dna_sequence):
     Input:
         dna_sequence = str
     """
-
     # Reference function
     def _builtin_find_all(sequence, pattern):
         offsets = []
@@ -182,7 +206,7 @@ def test_find_all(dna_sequence):
             offsets.append(index)
             index = sequence.find(pattern, index + 1)
         return offsets
-
+    
     dna_pattern = "AGGACTCAGTCTGTCAGATACTTAGGACTCGACATGCATAAAGGAGAA"
     assert sorted(find_all(dna_sequence, dna_pattern)) == sorted(_builtin_find_all(dna_sequence, dna_pattern))
 
@@ -237,7 +261,7 @@ if __name__ == "__main__":
     runtimes.append(time.process_time())
     microsatellite, longest_repeat = find_longest_microsatellite_repeat(dna_sequence)
     runtimes[-1] = time.process_time() - runtimes[-1]
-
+    
     # Longest AAT repeat: 19
     print(f"Longest {microsatellite} repeat: {longest_repeat}")
 
@@ -253,4 +277,4 @@ if __name__ == "__main__":
 
     if participate_in_competition:
         for idx, runtime in enumerate(runtimes):
-            print(f"Task {idx + 2}: {round(runtime, 2)} seconds")
+            print(f"Task {idx+2}: {round(runtime, 2)} seconds")
