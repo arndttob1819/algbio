@@ -7,6 +7,9 @@ import time
 from Bio import SeqIO
 
 
+PATHS = []
+
+
 def find_local_alignments(dna_sequence1, dna_sequence2, match=1, mismatch=-1, gap=-1, max_alignments=10_000):
     """
     Implements the Smith-Waterman algorithm to find all local alignments between two dna sequences.
@@ -24,12 +27,92 @@ def find_local_alignments(dna_sequence1, dna_sequence2, match=1, mismatch=-1, ga
         max_score = int
     """
     alignments = []
-    max_score = 0
 
-    # TODO: add your implementation here
+    matrix = [[0 for i in range(len(dna_sequence2)+1)] for j in range(len(dna_sequence1)+1)]
+    max_scores = []
+    maximum_score = 0
 
-    return alignments, max_score
+    matrix, max_scores = compute_matrix(dna_sequence1, dna_sequence2)
 
+    for score in max_scores:
+        traceback(matrix, dna_sequence1, dna_sequence2, path = [score])
+
+    alignments = calculate_alignments(dna_sequence1, dna_sequence2)
+
+    return alignments, maximum_score
+
+def compute_matrix(dna_sequence1, dna_sequence2, match=1, mismatch=-1, gap=-1):
+    matrix = [[0 for i in range(len(dna_sequence2)+1)] for j in range(len(dna_sequence1)+1)]
+    max_scores = []
+    maximum_score = 0
+
+    for i in range(1, len(dna_sequence1)+1):
+        for j in range(1, len(dna_sequence2)+1):
+            left_score = matrix[i][j-1] + gap
+            up_score = matrix[i-1][j] + gap
+            if dna_sequence1[i-1] == dna_sequence2[j-1]:
+                diag_score = match +  matrix[i-1][j-1]
+            else:
+                diag_score = mismatch +  matrix[i-1][j-1]
+            maximum = max(0, left_score, up_score, diag_score)
+            matrix[i][j] = maximum
+
+            # find max
+            if maximum > maximum_score:
+                max_scores = []
+                max_scores.append([i,j])
+                maximum_score = maximum
+            elif maximum == maximum_score:
+                max_scores.append([i,j])
+
+    return matrix, max_scores
+
+def traceback(matrix, dna_sequence1, dna_sequence2, path):
+    if 0 in path[-1]:
+        PATHS.append(path)
+        return 
+    
+    i = path[-1][0]
+    j = path[-1][1]
+    left_score = matrix[i][j-1] - 1
+    up_score = matrix[i-1][j] - 1
+    if dna_sequence1[i-1] == dna_sequence2[j-1]:
+        diag_score = 1 +  matrix[i-1][j-1]
+    else:
+        diag_score = -1 +  matrix[i-1][j-1]
+    
+    maximum = max(left_score, up_score, diag_score)
+
+    if left_score == maximum:
+        traceback(matrix, dna_sequence1, dna_sequence2, path + [[i, j-1]])
+    if up_score == maximum:
+        traceback(matrix, dna_sequence1, dna_sequence2, path + [[i-1, j]])
+    if diag_score == maximum:
+        traceback(matrix, dna_sequence1, dna_sequence2, path + [[i-1, j-1]])
+
+def calculate_alignments(dna_sequence1, dna_sequence2):
+    alignments = []
+    for path in PATHS:
+        string1 = ""
+        string2 = ""
+        last_i = 0
+        last_j = 0
+        path = path[::-1]
+        for tile in path[1:]:
+            # print(tile)
+            if last_i == tile[0]:
+                string1 += "-"
+                string2 += dna_sequence2[tile[1]-1]
+            elif last_j == tile[1]:
+                string1 += dna_sequence1[tile[0]-1]
+                string2 += "-"
+            else:
+                string1 += dna_sequence1[tile[0]-1]
+                string2 += dna_sequence2[tile[1]-1]
+            last_i = tile[0]
+            last_j = tile[1]
+        alignments.append((string1, string2))
+    return alignments
 
 def compute_hemoglobin_ranking():
     """
@@ -47,6 +130,13 @@ def compute_hemoglobin_ranking():
     scores = []
 
     # TODO: add your implementation here
+    file = comparates[0] + ".fasta"
+    human_records = list(SeqIO.parse(human_file, 'fasta'))
+    human_genePattern = str(human_records[0].seq)
+
+    records1 = list(SeqIO.parse(file, 'fasta'))
+    genePattern1 = str(records1[0].seq)
+    print(find_local_alignments(genePattern1, human_genePattern))
 
     return ranking, scores
 
